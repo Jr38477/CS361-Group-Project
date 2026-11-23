@@ -1,0 +1,59 @@
+from django import forms
+from django.contrib.auth import get_user_model
+from django.forms import formset_factory
+
+from .models import Course
+from .roles import INSTRUCTOR, TA
+
+
+class StaffChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, user):
+        name = user.get_full_name() or user.get_username()
+        return f"{name} ({user.email or user.get_username()})"
+
+
+class CourseForm(forms.ModelForm):
+    instructor = StaffChoiceField(queryset=None, label="Instructor")
+    ta1 = StaffChoiceField(queryset=None, label="TA 1")
+    ta2 = StaffChoiceField(queryset=None, label="TA 2")
+
+    class Meta:
+        model = Course
+        fields = ["course_number", "course_name"]
+        error_messages = {"course_number": {"unique": "A course with this course number already exists."}}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        users = get_user_model().objects.filter(is_active=True)
+        for field, role in (("instructor", INSTRUCTOR), ("ta1", TA), ("ta2", TA)):
+            self.fields[field].queryset = users.filter(groups__name=role).order_by("first_name", "last_name", "pk").distinct()
+            self.fields[field].error_messages.update({
+                "required": "Exactly one instructor and two TAs are required; select this person.",
+                "invalid_choice": f"Select an existing active {role} account for this position.",
+            })
+
+    def clean(self):
+        data = super().clean()
+        staff = [data[key].pk for key in ("instructor", "ta1", "ta2") if key in data]
+        if len(staff) != len(set(staff)):
+            raise forms.ValidationError("All three staff assignments must be different people.")
+        return data
+
+
+class AvailabilityForm(forms.Form):
+    location = forms.CharField(max_length=120)
+    date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    start_time = forms.TimeField(widget=forms.TimeInput(attrs={"type": "time"}))
+    end_time = forms.TimeField(widget=forms.TimeInput(attrs={"type": "time"}))
+
+    def clean(self):
+        data = super().clean()
+        if data.get("start_time") and data.get("end_time") and data["end_time"] <= data["start_time"]:
+            self.add_error("end_time", "End time must be later than start time.")
+        return data
+
+
+AvailabilityFormSet = formset_factory(
+    AvailabilityForm, extra=0, min_num=1, validate_min=True,
+    max_num=50, validate_max=True, absolute_max=50, can_delete=True,
+)

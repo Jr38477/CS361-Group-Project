@@ -1,0 +1,29 @@
+name: Course acceptance tests
+
+on:
+  push:
+    branches: [main, 'feature/admin-course-*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  courses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - name: Check configuration and migrations
+        working-directory: OfficeHoursScheduling
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py migrate --noinput
+      - name: Run course acceptance tests
+        working-directory: OfficeHoursScheduling
+        run: python manage.py test OfficeHourSchedulingApp --verbosity 2

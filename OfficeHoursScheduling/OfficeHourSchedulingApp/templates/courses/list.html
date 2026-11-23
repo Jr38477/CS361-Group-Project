@@ -1,0 +1,9 @@
+{% extends 'courses/base.html' %}
+{% block content %}
+<div class="heading"><div><p class="eyebrow">Administrator</p><h1>Courses</h1></div><a class="button" href="{% url 'courses:create' %}">Create course</a></div>
+<form class="search" method="get"><label for="course-search">Search course number or name</label><div><input id="course-search" name="q" value="{{ query }}"><button>Search</button><a href="{% url 'courses:list' %}">Clear</a></div></form>
+<table><thead><tr><th scope="col">Course number</th><th scope="col">Course name</th><th scope="col">Actions</th></tr></thead><tbody>
+{% for course in courses %}<tr><td>{{ course.course_number }}</td><td>{{ course.course_name }}</td><td><a href="{% url 'courses:detail' course.pk %}">View course</a></td></tr>
+{% empty %}<tr><td colspan="3">{% if query %}No courses match your search.{% else %}No courses have been created yet.{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

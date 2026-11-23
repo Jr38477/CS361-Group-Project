@@ -1,0 +1,28 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+{% block title %}Create course{% endblock %}
+{% block content %}
+<p><a href="{% url 'courses:list' %}">← Courses</a></p>
+<h1>Create course</h1><p>Select one instructor and two different TAs. Provide at least one dated availability range and location for each person. All fields are required.</p>
+<form method="post" id="create-course" novalidate>
+{% csrf_token %}
+{{ form.non_field_errors }}
+<section class="card"><h2>Course and staff</h2>
+{% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</div>{% endfor %}
+</section>
+{% for key, label, formset in sections %}
+<fieldset class="card availability" data-prefix="{{ key }}"><legend>{{ label }} availability</legend>
+{{ formset.management_form }}{{ formset.non_form_errors }}
+<div class="ranges">
+{% for range in formset %}<div class="range"><h3>Time range {{ forloop.counter }}</h3>{{ range.non_field_errors }}
+{% for field in range %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+</div>{% endfor %}
+</div>
+<button type="submit" name="add_range" value="{{ key }}" class="secondary add-range">Add another time range</button>
+<template><div class="range"><h3>Additional time range</h3>{% for field in formset.empty_form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></template>
+</fieldset>
+{% endfor %}
+<div class="actions"><button type="submit">Create course</button><a class="button secondary" href="{% url 'courses:list' %}">Cancel</a></div>
+</form>
+<script src="{% static 'courses/availability.js' %}" defer></script>
+{% endblock %}

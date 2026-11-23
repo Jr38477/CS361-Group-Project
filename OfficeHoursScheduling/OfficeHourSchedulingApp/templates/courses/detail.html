@@ -1,0 +1,13 @@
+{% extends 'courses/base.html' %}
+{% block title %}{{ course.course_number }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'courses:list' %}">← Courses</a></p>
+<div class="heading"><div><h1>{{ course.course_number }}</h1><p>{{ course.course_name }}</p></div><a class="button danger" href="{% url 'courses:delete' course.pk %}">Delete course</a></div>
+{% for assignment in course.staff_assignments.all %}
+<section class="card"><h2>{{ assignment.get_role_display }}: {% firstof assignment.user.get_full_name assignment.user.get_username %}</h2>
+<table><thead><tr><th scope="col">Date</th><th scope="col">Start</th><th scope="col">End</th><th scope="col">Location</th></tr></thead><tbody>
+{% for range in assignment.availability.all %}<tr><td>{{ range.date|date:'Y-m-d' }}</td><td>{{ range.start_time|time:'H:i' }}</td><td>{{ range.end_time|time:'H:i' }}</td><td>{{ range.location }}</td></tr>{% endfor %}
+</tbody></table></section>
+{% endfor %}
+<p>This course is available for student assignments.</p>
+{% endblock %}

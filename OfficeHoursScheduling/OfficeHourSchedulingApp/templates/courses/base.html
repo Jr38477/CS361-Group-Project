@@ -1,0 +1,18 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Courses{% endblock %} | Office Hours</title>
+  <link rel="stylesheet" href="{% static 'courses/courses.css' %}">
+</head>
+<body>
+<header><a href="{% url 'courses:list' %}">Office Hours · Courses</a>
+{% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<span>{{ user.get_username }}</span> <button>Log out</button></form>{% endif %}</header>
+<main>
+  {% for message in messages %}<p class="notice {{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
