@@ -102,3 +102,34 @@ class CreateStaffAccountForm(forms.Form):
             raise forms.ValidationError("Invalid role selected.")
         group, _ = Group.objects.get_or_create(name=group_name)
         return group
+
+
+class EditAccountForm(forms.Form):
+    name = forms.CharField(max_length=150, required=True)
+    email = forms.EmailField(required=True)
+    role = forms.ChoiceField(
+        choices=[("instructor", "Instructor"), ("ta", "TA")],
+        required=True,
+    )
+
+    def __init__(self, *args, target_user=None, **kwargs):
+        self.target_user = target_user
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip()
+        user_model = get_user_model()
+        qs = user_model.objects.filter(email__iexact=email)
+        if self.target_user is not None:
+            qs = qs.exclude(pk=self.target_user.pk)
+        if qs.exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
+
+    def clean_role(self):
+        role = self.cleaned_data["role"].strip().lower()
+        group_name = ROLE_TO_GROUP_NAME.get(role)
+        if not group_name:
+            raise forms.ValidationError("Invalid role selected.")
+        group, _ = Group.objects.get_or_create(name=group_name)
+        return group
