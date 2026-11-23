@@ -10,3 +10,6 @@ urlpatterns = [
     path("<int:pk>/", CourseDetailView.as_view(), name="detail"),
     path("<int:pk>/delete/", CourseDeleteView.as_view(), name="delete"),
 ]
+urlpatterns = [
+    path("staff/create/", views.create_staff_account, name="create_staff_account"),
+]
