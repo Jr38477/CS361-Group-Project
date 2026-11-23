@@ -13,7 +13,13 @@ from django.utils.crypto import get_random_string
 from django.views import View
 
 from . import services
-from .forms import AvailabilityFormSet, CourseForm, CreateStaffAccountForm
+from .forms import (
+    AvailabilityFormSet,
+    CourseForm,
+    CreateStaffAccountForm,
+    EditAccountForm,
+    ROLE_TO_GROUP_NAME,
+)
 from .models import Course, StaffAssignment
 from .roles import is_administrator
 
@@ -65,6 +71,86 @@ def create_staff_account(request):
         form = CreateStaffAccountForm()
 
     return render(request, "staff/create_staff_account.html", {"form": form})
+
+
+@login_required
+def edit_account(request, user_id):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Administrator access required.")
+
+    user_model = get_user_model()
+    target_user = user_model.objects.filter(pk=user_id).first()
+
+    if target_user is None:
+        messages.error(request, "The selected account could not be found.")
+        return render(
+            request,
+            "staff/edit_account.html",
+            {"form": None, "target_user": None},
+        )
+
+    current_group = target_user.groups.filter(
+        name__in=ROLE_TO_GROUP_NAME.values()
+    ).first()
+    initial_role = (
+        "ta"
+        if current_group and current_group.name == "TA"
+        else "instructor"
+    )
+
+    if request.method == "POST":
+        raw_name = request.POST.get("name", "").strip()
+        raw_email = request.POST.get("email", "").strip()
+        raw_role = request.POST.get("role", "").strip()
+
+        if not raw_name or not raw_email or not raw_role:
+            messages.error(request, "missing field pop up")
+            form = EditAccountForm(request.POST, target_user=target_user)
+            return render(
+                request,
+                "staff/edit_account.html",
+                {"form": form, "target_user": target_user},
+            )
+
+        form = EditAccountForm(request.POST, target_user=target_user)
+        if form.is_valid():
+            new_group = form.cleaned_data["role"]
+            try:
+                with transaction.atomic():
+                    target_user.first_name = form.cleaned_data["name"].strip()
+                    target_user.email = form.cleaned_data["email"].strip()
+                    target_user.save()
+                    target_user.groups.remove(
+                        *target_user.groups.filter(
+                            name__in=ROLE_TO_GROUP_NAME.values()
+                        )
+                    )
+                    target_user.groups.add(new_group)
+            except Exception:
+                messages.error(request, "unsuccessful edits try again later")
+                return render(
+                    request,
+                    "staff/edit_account.html",
+                    {"form": form, "target_user": target_user},
+                )
+
+            messages.success(request, "Account updated successfully.")
+            return redirect("edit_account", user_id=target_user.pk)
+    else:
+        form = EditAccountForm(
+            initial={
+                "name": target_user.first_name,
+                "email": target_user.email,
+                "role": initial_role,
+            },
+            target_user=target_user,
+        )
+
+    return render(
+        request,
+        "staff/edit_account.html",
+        {"form": form, "target_user": target_user},
+    )
 
 
 class AdministratorRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
