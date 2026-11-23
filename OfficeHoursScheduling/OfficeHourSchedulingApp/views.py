@@ -67,6 +67,31 @@ def create_staff_account(request):
     return render(request, "staff/create_staff_account.html", {"form": form})
 
 
+@login_required
+def delete_account(request, user_id):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Administrator access required.")
+
+    user_model = get_user_model()
+    target_user = user_model.objects.filter(pk=user_id).first()
+
+    if target_user is None:
+        messages.error(request, "Account could not be found.")
+        return redirect("delete_account", user_id=user_id)
+
+    if request.method == "POST":
+        username = target_user.username
+        target_user.delete()
+        messages.success(request, f"Account '{username}' has been deleted.")
+        return redirect("delete_account", user_id=user_id)
+
+    return render(
+        request,
+        "staff/delete_account_confirm.html",
+        {"target_user": target_user},
+    )
+
+
 class AdministratorRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
         return is_administrator(self.request.user)
